@@ -159,8 +159,8 @@ def analyze_audio(pcm, sample_rate):
         centroid_hz = float(np.sum(freqs * mono_mag) / mag_sum) if mag_sum > 1e-9 else 0.0
         centroid_arr[f] = centroid_hz / nyquist
 
-        peak_idx = int(np.argmax(mono_mag[1:]) + 1) if len(mono_mag) > 1 else 0
-        peak_hz = float(freqs[peak_idx]) if peak_idx < len(freqs) else 0.0
+        peak_idx = int(np.argmax(mono_mag)) if len(mono_mag) else 0
+        peak_hz = float(freqs[peak_idx]) if len(freqs) and peak_idx < len(freqs) else 0.0
         pitch_arr[f] = np.clip((np.log2(max(55.0, peak_hz) / 55.0) / 5.0), 0.0, 1.0)
 
         if mag_sum > 1e-9:
@@ -235,11 +235,12 @@ def analyze_audio(pcm, sample_rate):
     freq_hop = max(1, round((sample_rate / HOP_SIZE) / sample_rate_frames))
     frequency_frames = []
     for i in range(0, total_frames, freq_hop):
-        prev_i = max(0, i - freq_hop)
-        pitch_delta = float(pitch_norm[i] - pitch_norm[prev_i])
-        bands = {name: round(float(band_norm[name][i]), 3) for name, _, _ in BANDS}
+        idx = min(i, total_frames - 1)
+        prev_i = max(0, idx - freq_hop)
+        pitch_delta = float(pitch_norm[idx] - pitch_norm[prev_i])
+        bands = {name: round(float(band_norm[name][idx]), 3) for name, _, _ in BANDS}
         frame = {
-            't': round(i * frame_time, 3),
+            't': round(idx * frame_time, 3),
             'sub': bands['sub'],
             'bass': bands['bass'],
             'lowMid': bands['lowMid'],
@@ -248,13 +249,13 @@ def analyze_audio(pcm, sample_rate):
             'presence': bands['presence'],
             'brilliance': bands['brilliance'],
             'air': bands['air'],
-            'onset': round(float(flux_norm[i]), 3),
-            'beatConfidence': round(_nearest_beat_confidence(i * frame_time, beat_timestamps, beat_interval), 3),
-            'pan': round(float(np.clip(pan_arr[i], -1, 1)), 3),
-            'centroid': round(float(np.clip(centroid_norm[i], 0, 1)), 3),
-            'pitch': round(float(np.clip(pitch_norm[i], 0, 1)), 3),
+            'onset': round(float(flux_norm[idx]), 3),
+            'beatConfidence': round(_nearest_beat_confidence(idx * frame_time, beat_timestamps, beat_interval), 3),
+            'pan': round(float(np.clip(pan_arr[idx], -1, 1)), 3),
+            'centroid': round(float(np.clip(centroid_norm[idx], 0, 1)), 3),
+            'pitch': round(float(np.clip(pitch_norm[idx], 0, 1)), 3),
             'pitchDelta': round(float(np.clip(pitch_delta, -1, 1)), 3),
-            'chord': round(float(np.clip(chord_norm[i], 0, 1)), 3),
+            'chord': round(float(np.clip(chord_norm[idx], 0, 1)), 3),
         }
         frame['events'] = _event_labels(frame)
         frequency_frames.append(frame)

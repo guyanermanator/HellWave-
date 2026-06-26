@@ -101,20 +101,20 @@ class AudioEngine {
         waiter.reject(error);
         continue;
       }
-
-      _clearWaiters() {
-        for (const waiter of this._stateWaiters) {
-          waiter.done = true;
-          clearTimeout(waiter.timeoutId);
-        }
-        this._stateWaiters = [];
-      }
       if (waiter.acceptStates.includes(state)) {
         waiter.done = true;
         clearTimeout(waiter.timeoutId);
         waiter.resolve(state);
       }
     }
+  }
+
+  _clearWaiters() {
+    for (const waiter of this._stateWaiters) {
+      waiter.done = true;
+      clearTimeout(waiter.timeoutId);
+    }
+    this._stateWaiters = [];
   }
 
   async whenReady() {
