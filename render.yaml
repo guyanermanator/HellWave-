@@ -1,13 +1,13 @@
 services:
   - type: web
     name: hellwave-server
-    env: node
+    env: python
     plan: free
-    buildCommand: cd server && npm install
-    startCommand: cd server && node index.js
+    buildCommand: cd server && pip install -r requirements.txt
+    startCommand: cd server && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
     envVars:
-      - key: NODE_ENV
-        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
       - key: PORT
         value: 10000
     healthCheckPath: /api/health
