@@ -108,7 +108,8 @@ function buildDemoAnalysis() {
   };
 }
 
-async function startGame(trackData, user, isDemo) {
+async function startGame(trackData, user, isDemo, options = {}) {
+  const { returnToMenuOnError = true } = options;
   const canvas = document.getElementById('game-canvas');
   resizeCanvas(canvas);
   showScreen('screen-game');
@@ -169,7 +170,7 @@ async function startGame(trackData, user, isDemo) {
     if (game) game.stop();
     currentGame = null;
     showGameLoading('', false);
-    showScreen('screen-menu');
+    if (returnToMenuOnError) showScreen('screen-menu');
     throw error;
   }
 }
@@ -178,6 +179,11 @@ function handleGameOver(result, trackData, user, isDemo) {
   document.getElementById('go-title').textContent = result.completed ? 'TRACK COMPLETE' : 'GAME OVER';
   document.getElementById('go-score').textContent = result.score.toLocaleString();
   document.getElementById('go-rank').textContent = result.comboRank;
+  const goError = document.getElementById('go-error');
+  if (goError) {
+    goError.textContent = '';
+    goError.classList.add('hidden');
+  }
   document.getElementById('gameover-overlay').classList.remove('hidden');
 
   if (user && user.id && trackData && trackData.videoId && !isDemo) {
@@ -186,12 +192,14 @@ function handleGameOver(result, trackData, user, isDemo) {
 
   document.getElementById('btn-retry').onclick = () => {
     document.getElementById('gameover-overlay').classList.add('hidden');
-    startGame(trackData, user, isDemo).catch((err) => {
-      showScreen('screen-menu');
+    startGame(trackData, user, isDemo, { returnToMenuOnError: false }).catch((err) => {
+      document.getElementById('gameover-overlay').classList.remove('hidden');
       const message = err && err.message ? err.message : 'Could not restart the song.';
-      document.getElementById('menu-message').textContent = message;
-      document.getElementById('menu-message').className = 'panel message-panel error';
-      document.getElementById('menu-message').classList.remove('hidden');
+      const errorEl = document.getElementById('go-error');
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+      }
     });
   };
 

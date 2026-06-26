@@ -39,6 +39,8 @@ class BaseEnemy {
   }
 
   _fireBullet(vx, vy, color = '#ffff88', opts = {}) {
+    if (!this.active) return;
+    if (this.y < HW.ENEMY_FIRE_MIN_Y || this.y > HW.CANVAS_H + this.size) return;
     this._bullets.push({
       x: this.x,
       y: this.y + this.size,

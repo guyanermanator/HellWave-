@@ -258,6 +258,7 @@ input[type="range"] { padding: 0; }
 }
 #game-loading-text, #go-stats { font-size: 0.75rem; text-align: center; line-height: 1.8; color: #ccaaff; }
 #go-score, #go-rank { color: #ffffc0; }
+#go-error { font-size: 0.65rem; color: #ff9cbf; text-align: center; max-width: min(520px, 90vw); margin: -0.3rem 0 0.2rem; }
 
 #mobile-controls {
   position: absolute; bottom: 0; left: 0; right: 0; height: 180px; display: flex;

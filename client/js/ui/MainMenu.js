@@ -6,6 +6,7 @@ class MainMenu {
     this._uiAudio = uiAudio;
     this._videoId = null;
     this._trackData = null;
+    this._songCache = this._loadSongCache();
     this._user = this._loadUser();
     this._settings = this._loadSettings();
     this._recentSongs = this._loadRecentSongs();
@@ -45,7 +46,10 @@ class MainMenu {
   _loadRecentSongs() {
     try {
       const raw = JSON.parse(localStorage.getItem('hw_recent_songs') || '[]');
-      return Array.isArray(raw) ? raw : [];
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .map((song) => this._resolveCachedTrack(song))
+        .filter((song) => song && song.videoId);
     } catch (_) {
       return [];
     }
@@ -53,6 +57,96 @@ class MainMenu {
 
   _saveRecentSongs() {
     localStorage.setItem('hw_recent_songs', JSON.stringify(this._recentSongs.slice(0, 8)));
+  }
+
+  _loadSongCache() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('hw_song_cache') || '{}');
+      return raw && typeof raw === 'object' ? raw : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  _saveSongCache() {
+    const entries = Object.values(this._songCache || {})
+      .filter((song) => song && song.videoId)
+      .sort((a, b) => (b.cachedAt || 0) - (a.cachedAt || 0))
+      .slice(0, 24);
+    const compact = {};
+    for (const song of entries) compact[song.videoId] = song;
+    this._songCache = compact;
+    try {
+      localStorage.setItem('hw_song_cache', JSON.stringify(compact));
+    } catch (_) {}
+  }
+
+  _extractVideoId(url) {
+    if (!url || typeof url !== 'string') return null;
+    try {
+      const parsed = new URL(url);
+      const fromQuery = parsed.searchParams.get('v');
+      if (fromQuery) return fromQuery;
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      if ((parsed.hostname.includes('youtu.be') || parsed.pathname.includes('/shorts/')) && parts.length) {
+        return parts[parts.length - 1];
+      }
+    } catch (_) {
+      const match = url.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{6,})/);
+      if (match) return match[1];
+    }
+    return null;
+  }
+
+  _compactTrack(trackData) {
+    if (!trackData) return null;
+    const videoId = trackData.videoId || this._extractVideoId(trackData.sourceUrl);
+    if (!videoId) return null;
+    return {
+      videoId,
+      title: trackData.title,
+      artist: trackData.artist,
+      thumbnail: trackData.thumbnail,
+      bpm: trackData.bpm,
+      duration: trackData.duration,
+      analysisKey: trackData.analysisKey,
+      seed: trackData.seed,
+      sourceUrl: trackData.sourceUrl || `https://www.youtube.com/watch?v=${videoId}`,
+      waveform: Array.isArray(trackData.waveform) ? trackData.waveform.slice(0, 1200) : [],
+      beatTimestamps: Array.isArray(trackData.beatTimestamps) ? trackData.beatTimestamps.slice(0, 3000) : [],
+      frequencyFrames: Array.isArray(trackData.frequencyFrames) ? trackData.frequencyFrames.slice(0, 2200) : [],
+      cachedAt: Date.now(),
+    };
+  }
+
+  _resolveCachedTrack(trackData) {
+    const compact = this._compactTrack(trackData);
+    if (!compact) return null;
+    const cached = this._songCache[compact.videoId];
+    if (!cached) return compact;
+    return {
+      ...cached,
+      ...compact,
+      beatTimestamps: (cached.beatTimestamps && cached.beatTimestamps.length >= compact.beatTimestamps.length)
+        ? cached.beatTimestamps
+        : compact.beatTimestamps,
+      frequencyFrames: (cached.frequencyFrames && cached.frequencyFrames.length >= compact.frequencyFrames.length)
+        ? cached.frequencyFrames
+        : compact.frequencyFrames,
+      waveform: (cached.waveform && cached.waveform.length >= compact.waveform.length) ? cached.waveform : compact.waveform,
+      sourceUrl: compact.sourceUrl || cached.sourceUrl,
+    };
+  }
+
+  _cacheTrack(trackData) {
+    const compact = this._compactTrack(trackData);
+    if (!compact) return null;
+    this._songCache[compact.videoId] = {
+      ...(this._songCache[compact.videoId] || {}),
+      ...compact,
+    };
+    this._saveSongCache();
+    return this._songCache[compact.videoId];
   }
 
   _refreshUserPanel() {
@@ -142,9 +236,14 @@ class MainMenu {
       if (!this._trackData) return;
       this._clearMessage();
       try {
+        this._trackData = this._resolveCachedTrack(this._trackData);
+        if (!this._trackData || !this._trackData.videoId) {
+          throw new Error('Selected song is missing a valid video ID.');
+        }
         if (!this._hasPlayableAnalysis(this._trackData)) {
           await this._hydrateSongAnalysis(this._trackData.sourceUrl || `https://www.youtube.com/watch?v=${this._trackData.videoId}`);
         }
+        this._cacheTrack(this._trackData);
         if (this._settings.fullscreen && !document.fullscreenElement) {
           try { await document.documentElement.requestFullscreen(); } catch (_) {}
         }
@@ -281,7 +380,7 @@ class MainMenu {
       clearInterval(progInterval);
       fill.style.width = '100%';
       this._videoId = data.videoId;
-      this._trackData = { ...data, sourceUrl: url };
+      this._trackData = this._resolveCachedTrack({ ...data, sourceUrl: url });
       this._renderTrackInfo(this._trackData);
       this._rememberTrack(this._trackData);
       setTimeout(() => {
@@ -309,20 +408,8 @@ class MainMenu {
   }
 
   _rememberTrack(trackData) {
-    const compact = {
-      videoId: trackData.videoId,
-      title: trackData.title,
-      artist: trackData.artist,
-      thumbnail: trackData.thumbnail,
-      bpm: trackData.bpm,
-      duration: trackData.duration,
-      analysisKey: trackData.analysisKey,
-      seed: trackData.seed,
-      sourceUrl: trackData.sourceUrl,
-      waveform: trackData.waveform,
-      beatTimestamps: Array.isArray(trackData.beatTimestamps) ? trackData.beatTimestamps.slice(0, 2000) : [],
-      frequencyFrames: Array.isArray(trackData.frequencyFrames) ? trackData.frequencyFrames.slice(0, 1200) : [],
-    };
+    const compact = this._cacheTrack(trackData);
+    if (!compact) return;
     this._recentSongs = [compact, ...this._recentSongs.filter((song) => song.videoId !== compact.videoId)].slice(0, 8);
     this._saveRecentSongs();
     this._renderRecentSongs();
@@ -350,14 +437,19 @@ class MainMenu {
         <span class="recent-song-badge">DDR</span>
       `;
       btn.addEventListener('click', () => {
-        this._trackData = { ...song };
-        this._videoId = song.videoId;
-        document.getElementById('input-url').value = song.sourceUrl || `https://www.youtube.com/watch?v=${song.videoId}`;
+        const selected = this._resolveCachedTrack(song);
+        if (!selected || !selected.videoId) {
+          this._showMessage('Could not load that recent song. Please reload it from URL.', 'error');
+          return;
+        }
+        this._trackData = selected;
+        this._videoId = selected.videoId;
+        document.getElementById('input-url').value = selected.sourceUrl || `https://www.youtube.com/watch?v=${selected.videoId}`;
         document.getElementById('track-status').classList.add('hidden');
         document.getElementById('track-info').classList.remove('hidden');
         this._renderTrackInfo(this._trackData);
-        if (!this._hasPlayableAnalysis(song)) {
-          this._hydrateSongAnalysis(song.sourceUrl || `https://www.youtube.com/watch?v=${song.videoId}`).catch(() => {});
+        if (!this._hasPlayableAnalysis(selected)) {
+          this._hydrateSongAnalysis(selected.sourceUrl || `https://www.youtube.com/watch?v=${selected.videoId}`).catch(() => {});
         }
       });
       root.appendChild(btn);
@@ -379,7 +471,7 @@ class MainMenu {
     const fullTrack = await APIClient.analyzeTrack(url);
     fill.style.width = '100%';
     this._videoId = fullTrack.videoId;
-    this._trackData = { ...fullTrack, sourceUrl: url };
+    this._trackData = this._resolveCachedTrack({ ...fullTrack, sourceUrl: url });
     this._rememberTrack(this._trackData);
     this._renderTrackInfo(this._trackData);
     setTimeout(() => statusEl.classList.add('hidden'), 250);

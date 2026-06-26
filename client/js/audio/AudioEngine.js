@@ -125,6 +125,11 @@ class AudioEngine {
 
   _waitForState(acceptStates, timeoutMs, code, message) {
     return new Promise((resolve, reject) => {
+      const currentState = this.getState();
+      if (acceptStates.includes(currentState)) {
+        resolve(currentState);
+        return;
+      }
       const waiter = {
         acceptStates,
         resolve,

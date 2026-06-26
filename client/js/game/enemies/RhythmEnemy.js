@@ -41,15 +41,16 @@ class RhythmEnemy extends BaseEnemy {
 
     if (!this._shootOnBeat || this._step % this._cadence !== 0) return;
     const ang = Math.atan2((this._playerY || HW.CANVAS_H) - this.y, (this._playerX || HW.CANVAS_W / 2) - this.x);
+    const speedMult = HW.RHYTHM_BULLET_SPEED_MULT || 1;
     if (this._labels.includes('kick')) {
       for (let i = -1; i <= 1; i++) {
         const a = ang + i * 0.18;
-        this._fireBullet(Math.cos(a) * 2.8, Math.sin(a) * 2.8, '#ffb56b', { kind: 'spread', radius: 4 });
+        this._fireBullet(Math.cos(a) * 2.8 * speedMult, Math.sin(a) * 2.8 * speedMult, '#ffb56b', { kind: 'spread', radius: 4 });
       }
     } else if (this._labels.includes('snare')) {
-      this._fireBullet(Math.cos(ang) * 4.6, Math.sin(ang) * 4.6, '#fff08f', { kind: 'laser', width: 6, length: 32, radius: 4 });
+      this._fireBullet(Math.cos(ang) * 4.6 * speedMult, Math.sin(ang) * 4.6 * speedMult, '#fff08f', { kind: 'laser', width: 6, length: 32, radius: 4 });
     } else {
-      this._fireBullet(Math.cos(ang) * 3.2, Math.sin(ang) * 3.2, '#8afdf1', {
+      this._fireBullet(Math.cos(ang) * 3.2 * speedMult, Math.sin(ang) * 3.2 * speedMult, '#8afdf1', {
         kind: 'wave',
         radius: 3,
         swayAmp: 1.8,
