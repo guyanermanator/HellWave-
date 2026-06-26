@@ -3,6 +3,7 @@ import time
 
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
+from werkzeug.exceptions import NotFound
 
 from db import init_db
 from limiter import limiter
@@ -32,10 +33,11 @@ def serve_client(path):
     # Don't intercept unmatched API routes
     if path.startswith('api/'):
         return jsonify({'error': 'Not found'}), 404
-    full_path = os.path.join(CLIENT_DIR, path)
-    if path and os.path.isfile(full_path):
-        return send_from_directory(CLIENT_DIR, path)
-    return send_from_directory(CLIENT_DIR, 'index.html')
+    # send_from_directory uses safe_join internally to prevent path traversal
+    try:
+        return send_from_directory(CLIENT_DIR, path or 'index.html')
+    except NotFound:
+        return send_from_directory(CLIENT_DIR, 'index.html')
 
 
 # Initialise database on startup (runs when gunicorn imports the module)

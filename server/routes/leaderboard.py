@@ -60,7 +60,7 @@ def submit_score(video_id):
     conn.execute(
         '''INSERT INTO scores (user_id, username, video_id, score, max_combo, combo_rank)
            VALUES (?, ?, ?, ?, ?, ?)''',
-        (user['id'], user['username'], video_id, score, max_combo or 0, combo_rank or 'E')
+        (user['id'], user['username'], video_id, score, max_combo, combo_rank)
     )
     conn.commit()
 

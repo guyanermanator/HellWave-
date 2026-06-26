@@ -37,14 +37,13 @@ def register():
         return jsonify({'error': 'Username already taken'}), 409
 
     user_id = str(uuid.uuid4())
-    user_color = color or '#ffffff'
     conn.execute(
         'INSERT INTO users (id, username, color) VALUES (?, ?, ?)',
-        (user_id, clean, user_color)
+        (user_id, clean, color or '#ffffff')
     )
     conn.commit()
 
-    return jsonify({'id': user_id, 'username': clean, 'color': user_color}), 201
+    return jsonify({'id': user_id, 'username': clean, 'color': color or '#ffffff'}), 201
 
 
 @users_bp.get('/check/<username>')

@@ -95,7 +95,7 @@ def analyze():
 
     except Exception as err:
         print(f'Audio analysis error: {err}')
-        return jsonify({'error': 'Analysis failed', 'detail': str(err)}), 500
+        return jsonify({'error': 'Analysis failed'}), 500
 
 
 @audio_bp.get('/status/<video_id>')
