@@ -109,6 +109,14 @@ class AudioEngine {
     }
   }
 
+  _clearWaiters() {
+    for (const waiter of this._stateWaiters) {
+      waiter.done = true;
+      clearTimeout(waiter.timeoutId);
+    }
+    this._stateWaiters = [];
+  }
+
   async whenReady() {
     if (!this._apiReady && window.YT && window.YT.Player) this._onApiReady();
     await this._readyPromise;
@@ -138,6 +146,7 @@ class AudioEngine {
     this._currentVideoId = videoId;
     if (!videoId) return;
     await this.whenReady();
+    this._clearWaiters();
 
     this._player.stopVideo();
     this._player.cueVideoById({ videoId, startSeconds: 0, suggestedQuality: 'small' });
@@ -173,6 +182,7 @@ class AudioEngine {
 
   stop() {
     if (this._ready && this._player) {
+      this._clearWaiters();
       this._player.stopVideo();
       this.seek(0);
     }

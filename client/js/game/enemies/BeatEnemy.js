@@ -26,9 +26,13 @@ class BeatEnemy extends BaseEnemy {
     this._sideDir *= -1;
 
     if (this._beatCount % 2 === 0) {
+      const beam = this._beatCount % 4 === 0;
       for (let a = -1; a <= 1; a++) {
         const angle = Math.PI / 2 + a * 0.32;
-        this._fireBullet(Math.cos(angle) * 2.8, Math.sin(angle) * 2.8, '#4488ff');
+        this._fireBullet(Math.cos(angle) * 2.8, Math.sin(angle) * 2.8, '#4488ff', beam
+          ? { kind: 'laser', width: 5, length: 30, radius: 4 }
+          : { kind: 'spread', radius: 4 }
+        );
       }
     }
   }

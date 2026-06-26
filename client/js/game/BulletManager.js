@@ -32,6 +32,10 @@ class BulletManager {
 
     for (const b of this._enemyBullets) {
       if (!b.active) continue;
+      b.age = (b.age || 0) + dt;
+      if (b.swayAmp && b.swayFreq) {
+        b.x += Math.sin(b.age * (6 + b.swayFreq * 8)) * b.swayAmp;
+      }
       b.x += b.vx;
       b.y += b.vy;
       if (b.y > h + 10 || b.x < -10 || b.x > w + 10 || b.y < -10) b.active = false;
@@ -69,7 +73,8 @@ class BulletManager {
       if (!b.active) continue;
       const dx = b.x - player.x;
       const dy = b.y - player.y;
-      if (dx * dx + dy * dy < (player.size - 2) * (player.size - 2)) {
+      const radius = (b.radius || 4) + (b.kind === 'beam' ? 2 : 0);
+      if (dx * dx + dy * dy < (player.size - 2 + radius) * (player.size - 2 + radius)) {
         b.active = false;
         return true;
       }
@@ -91,12 +96,30 @@ class BulletManager {
     // Enemy bullets
     for (const b of this._enemyBullets) {
       if (!b.active) continue;
-      ctx.fillStyle = b.color || '#ffff88';
-      ctx.shadowColor = b.color || '#ffff44';
-      ctx.shadowBlur = 4;
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
-      ctx.fill();
+      const color = b.color || '#ffff88';
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = b.kind === 'beam' ? 8 : 4;
+      if (b.trail) {
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = color;
+        ctx.fillRect(b.x - 1, b.y - (b.length || 16), 2, b.length || 16);
+        ctx.globalAlpha = 1;
+      }
+      if (b.kind === 'laser' || b.kind === 'beam') {
+        const width = b.width || (b.kind === 'beam' ? 8 : 5);
+        const len = b.length || (b.kind === 'beam' ? 60 : 24);
+        const ang = Math.atan2(b.vy, b.vx || 0.0001);
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(ang);
+        ctx.fillRect(-2, -width / 2, len, width);
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius || 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     ctx.shadowBlur = 0;

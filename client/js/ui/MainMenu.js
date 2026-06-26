@@ -142,6 +142,12 @@ class MainMenu {
       if (!this._trackData) return;
       this._clearMessage();
       try {
+        if (!this._hasPlayableAnalysis(this._trackData)) {
+          await this._hydrateSongAnalysis(this._trackData.sourceUrl || `https://www.youtube.com/watch?v=${this._trackData.videoId}`);
+        }
+        if (this._settings.fullscreen && !document.fullscreenElement) {
+          try { await document.documentElement.requestFullscreen(); } catch (_) {}
+        }
         await this._onStartGame(this._trackData, this._user, false);
       } catch (err) {
         this._showMessage(this._friendlyStartError(err), 'error');
@@ -168,12 +174,32 @@ class MainMenu {
         this._saveSettings();
       });
     });
+
+    const fullscreenToggle = document.getElementById('setting-fullscreen');
+    if (fullscreenToggle) {
+      fullscreenToggle.addEventListener('change', (e) => {
+        this._settings.fullscreen = !!e.target.checked;
+        this._saveSettings();
+      });
+    }
+
+    const fullscreenBtn = document.getElementById('btn-toggle-fullscreen');
+    if (fullscreenBtn) {
+      fullscreenBtn.addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen();
+          else await document.documentElement.requestFullscreen();
+        } catch (_) {}
+      });
+    }
   }
 
   _applySettingsToUI() {
     document.getElementById('setting-master').value = Math.round(this._settings.masterVolume * 100);
     document.getElementById('setting-music').value = Math.round(this._settings.musicVolume * 100);
     document.getElementById('setting-sfx').value = Math.round(this._settings.sfxVolume * 100);
+    const fullscreenToggle = document.getElementById('setting-fullscreen');
+    if (fullscreenToggle) fullscreenToggle.checked = !!this._settings.fullscreen;
     this._saveSettings();
   }
 
@@ -294,6 +320,8 @@ class MainMenu {
       seed: trackData.seed,
       sourceUrl: trackData.sourceUrl,
       waveform: trackData.waveform,
+      beatTimestamps: Array.isArray(trackData.beatTimestamps) ? trackData.beatTimestamps.slice(0, 2000) : [],
+      frequencyFrames: Array.isArray(trackData.frequencyFrames) ? trackData.frequencyFrames.slice(0, 1200) : [],
     };
     this._recentSongs = [compact, ...this._recentSongs.filter((song) => song.videoId !== compact.videoId)].slice(0, 8);
     this._saveRecentSongs();
@@ -328,9 +356,33 @@ class MainMenu {
         document.getElementById('track-status').classList.add('hidden');
         document.getElementById('track-info').classList.remove('hidden');
         this._renderTrackInfo(this._trackData);
+        if (!this._hasPlayableAnalysis(song)) {
+          this._hydrateSongAnalysis(song.sourceUrl || `https://www.youtube.com/watch?v=${song.videoId}`).catch(() => {});
+        }
       });
       root.appendChild(btn);
     });
+  }
+
+  _hasPlayableAnalysis(trackData) {
+    return !!(trackData && Array.isArray(trackData.frequencyFrames) && trackData.frequencyFrames.length);
+  }
+
+  async _hydrateSongAnalysis(url) {
+    if (!url) return;
+    const statusText = document.getElementById('track-status-text');
+    const statusEl = document.getElementById('track-status');
+    const fill = document.getElementById('progress-fill');
+    statusEl.classList.remove('hidden');
+    statusText.textContent = 'Refreshing synced analysis…';
+    fill.style.width = '30%';
+    const fullTrack = await APIClient.analyzeTrack(url);
+    fill.style.width = '100%';
+    this._videoId = fullTrack.videoId;
+    this._trackData = { ...fullTrack, sourceUrl: url };
+    this._rememberTrack(this._trackData);
+    this._renderTrackInfo(this._trackData);
+    setTimeout(() => statusEl.classList.add('hidden'), 250);
   }
 
   _friendlyLoadError(message) {

@@ -44,9 +44,11 @@ class EnemyManager {
         Math.round((((frame.pan || 0) + 1) * 0.5) * (laneCount - 1) + (rand() - 0.5))
       ));
 
+      const labels = frame.events || [];
       let type = 'basic';
-      if ((frame.events || []).includes('kick') || low > 0.72) type = 'beat';
-      else if ((frame.events || []).includes('hat') || (frame.events || []).includes('vocal') || high > 0.65) type = 'frequency';
+      if (labels.includes('kick') || labels.includes('snare') || labels.includes('hat') || low > 0.72) type = 'rhythm';
+      else if (labels.includes('vocal') || labels.includes('slide') || labels.includes('chord') || high > 0.65) type = 'glide';
+      else if (high > 0.56 || labels.includes('instrument')) type = 'frequency';
 
       plan.push({
         t: frame.t,
@@ -55,6 +57,9 @@ class EnemyManager {
         power: density,
         pan: frame.pan || 0,
         centroid: frame.centroid || 0.5,
+        pitch: frame.pitch || 0.5,
+        pitchDelta: frame.pitchDelta || 0,
+        labels,
         frame,
         roll: rand(),
         roll2: rand(),
@@ -108,8 +113,24 @@ class EnemyManager {
     const y = -20 - event.power * 30;
     const opts = { event };
 
+    if ((event.labels || []).includes('chord') && event.type !== 'boss') {
+      const cascade = [-1, 0, 1];
+      for (const offset of cascade) {
+        const nx = Math.max(20, Math.min(this._canvas.width - 20, x + offset * laneWidth * 0.55));
+        const ny = y - Math.abs(offset) * 22;
+        this._enemies.push(new GlideEnemy(nx, ny, { event: { ...event, pitchDelta: event.pitchDelta + offset * 0.08 } }));
+      }
+      return;
+    }
+
     let enemy;
     switch (event.type) {
+      case 'rhythm':
+        enemy = new RhythmEnemy(x, y, opts);
+        break;
+      case 'glide':
+        enemy = new GlideEnemy(x, y, opts);
+        break;
       case 'beat':
         enemy = new BeatEnemy(x, y, opts);
         break;

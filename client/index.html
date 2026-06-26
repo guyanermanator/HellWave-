@@ -96,6 +96,8 @@
       <label class="setting-row"><span>Master</span><input id="setting-master" type="range" min="0" max="100" value="90" /></label>
       <label class="setting-row"><span>Music</span><input id="setting-music" type="range" min="0" max="100" value="85" /></label>
       <label class="setting-row"><span>SFX</span><input id="setting-sfx" type="range" min="0" max="100" value="75" /></label>
+      <label class="setting-row setting-toggle"><span>Fullscreen</span><input id="setting-fullscreen" type="checkbox" /></label>
+      <button id="btn-toggle-fullscreen" class="btn-secondary">Toggle Fullscreen Now</button>
     </div>
   </div>
 </div>
@@ -167,6 +169,7 @@
   <div class="panel leaderboard-panel">
     <h2>LEADERBOARD</h2>
     <p id="lb-track-name" class="lb-subtitle"></p>
+    <p class="lb-subtitle">Top 10 Scores</p>
     <table id="lb-table">
       <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Rank</th></tr></thead>
       <tbody id="lb-body"></tbody>
@@ -187,6 +190,8 @@
 <script src="js/game/enemies/BasicEnemy.js"></script>
 <script src="js/game/enemies/BeatEnemy.js"></script>
 <script src="js/game/enemies/FrequencyEnemy.js"></script>
+<script src="js/game/enemies/RhythmEnemy.js"></script>
+<script src="js/game/enemies/GlideEnemy.js"></script>
 <script src="js/game/enemies/BossEnemy.js"></script>
 <script src="js/game/Player.js"></script>
 <script src="js/game/BulletManager.js"></script>
