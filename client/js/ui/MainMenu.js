@@ -1,18 +1,20 @@
-/* ui/MainMenu.js — handles the main menu: user setup, track loading */
+/* ui/MainMenu.js — user setup, menus, settings, recent songs, track loading */
 
 class MainMenu {
-  constructor(onStartGame) {
+  constructor(onStartGame, uiAudio) {
     this._onStartGame = onStartGame;
+    this._uiAudio = uiAudio;
     this._videoId = null;
     this._trackData = null;
-    this._analysisPolling = null;
     this._user = this._loadUser();
+    this._settings = this._loadSettings();
+    this._recentSongs = this._loadRecentSongs();
 
     this._bindAll();
+    this._applySettingsToUI();
     this._refreshUserPanel();
+    this._renderRecentSongs();
   }
-
-  // ── Persistence ────────────────────────────────────────────────────────────
 
   _loadUser() {
     try {
@@ -26,173 +28,328 @@ class MainMenu {
     localStorage.setItem('hw_user', JSON.stringify(user));
   }
 
-  get user() { return this._user; }
+  _loadSettings() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('hw_settings') || 'null');
+      return { ...HW.DEFAULT_SETTINGS, ...(raw || {}) };
+    } catch (_) {
+      return { ...HW.DEFAULT_SETTINGS };
+    }
+  }
 
-  // ── DOM helpers ────────────────────────────────────────────────────────────
+  _saveSettings() {
+    localStorage.setItem('hw_settings', JSON.stringify(this._settings));
+    window.dispatchEvent(new CustomEvent('hw:settings-changed', { detail: { ...this._settings } }));
+  }
+
+  _loadRecentSongs() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('hw_recent_songs') || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  _saveRecentSongs() {
+    localStorage.setItem('hw_recent_songs', JSON.stringify(this._recentSongs.slice(0, 8)));
+  }
 
   _refreshUserPanel() {
     const display = document.getElementById('user-display');
-    const create  = document.getElementById('user-create');
-    const track   = document.getElementById('track-panel');
+    const create = document.getElementById('user-create');
+    const actions = document.getElementById('menu-actions');
+    const play = document.getElementById('play-panel');
+    const settings = document.getElementById('settings-panel');
 
     if (this._user) {
       display.classList.remove('hidden');
       create.classList.add('hidden');
-      const el = document.getElementById('user-name-display');
-      el.textContent = this._user.username;
-      el.style.color = this._user.color || '#ffffff';
-      track.classList.remove('hidden');
+      actions.classList.remove('hidden');
+      document.getElementById('user-name-display').textContent = this._user.username;
+      document.getElementById('user-name-display').style.color = this._user.color || '#ffffff';
     } else {
       display.classList.add('hidden');
       create.classList.remove('hidden');
-      track.classList.add('hidden');
+      actions.classList.add('hidden');
+      play.classList.add('hidden');
+      settings.classList.add('hidden');
     }
   }
 
-  // ── Event binding ──────────────────────────────────────────────────────────
+  _showPanel(panelName) {
+    document.getElementById('play-panel').classList.toggle('hidden', panelName !== 'play');
+    document.getElementById('settings-panel').classList.toggle('hidden', panelName !== 'settings');
+  }
+
+  _showMessage(text, type = 'info') {
+    const panel = document.getElementById('menu-message');
+    panel.textContent = text;
+    panel.className = `panel message-panel ${type}`;
+    panel.classList.remove('hidden');
+  }
+
+  _clearMessage() {
+    document.getElementById('menu-message').classList.add('hidden');
+  }
 
   _bindAll() {
-    // Set username
+    document.querySelectorAll('button').forEach((button) => {
+      button.addEventListener('click', () => {
+        const type = button.classList.contains('btn-secondary') ? 'back' : 'confirm';
+        this._uiAudio && this._uiAudio.blip(type);
+      });
+    });
+
     document.getElementById('btn-set-user').addEventListener('click', () => this._setUsername());
     document.getElementById('input-username').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this._setUsername();
     });
 
-    // Change user
     document.getElementById('btn-change-user').addEventListener('click', () => {
       this._user = null;
       localStorage.removeItem('hw_user');
       this._refreshUserPanel();
+      this._showMessage('Set a player name for this playtest build.', 'info');
     });
 
-    // Color picker
-    document.getElementById('btn-color-user').addEventListener('click', () => {
-      document.getElementById('color-panel').classList.remove('hidden');
-    });
-    document.getElementById('btn-cancel-color').addEventListener('click', () => {
-      document.getElementById('color-panel').classList.add('hidden');
-    });
-    document.getElementById('btn-save-color').addEventListener('click', () => this._saveColor());
+    document.getElementById('btn-color-user').addEventListener('click', () => this._changeExistingUserColor());
+    document.getElementById('btn-open-play').addEventListener('click', () => this._showPanel('play'));
+    document.getElementById('btn-close-play').addEventListener('click', () => this._showPanel(null));
+    document.getElementById('btn-open-settings').addEventListener('click', () => this._showPanel('settings'));
+    document.getElementById('btn-close-settings').addEventListener('click', () => this._showPanel(null));
 
-    document.querySelectorAll('.color-swatch').forEach(btn => {
+    document.querySelectorAll('.color-swatch').forEach((btn) => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.color-swatch').forEach((el) => el.classList.remove('selected'));
         btn.classList.add('selected');
         document.getElementById('color-custom').value = btn.dataset.color;
       });
     });
 
-    // Load track
+    document.getElementById('color-custom').addEventListener('input', (e) => {
+      document.querySelectorAll('.color-swatch').forEach((el) => {
+        el.classList.toggle('selected', el.dataset.color.toLowerCase() === e.target.value.toLowerCase());
+      });
+    });
+
     document.getElementById('btn-load-track').addEventListener('click', () => this._loadTrack());
     document.getElementById('input-url').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this._loadTrack();
     });
 
-    // Start game
-    document.getElementById('btn-start-game').addEventListener('click', () => {
-      if (this._trackData) this._onStartGame(this._trackData, this._user, false);
-    });
-
-    // Demo mode
-    document.getElementById('btn-demo-mode').addEventListener('click', () => {
-      this._onStartGame(null, this._user, true);
-    });
-
-    // View leaderboard
-    document.getElementById('btn-view-leaderboard').addEventListener('click', () => {
-      if (this._videoId) {
-        window.leaderboardUI.show(this._videoId, this._trackData && this._trackData.title);
+    document.getElementById('btn-start-game').addEventListener('click', async () => {
+      if (!this._trackData) return;
+      this._clearMessage();
+      try {
+        await this._onStartGame(this._trackData, this._user, false);
+      } catch (err) {
+        this._showMessage(this._friendlyStartError(err), 'error');
       }
+    });
+
+    document.getElementById('btn-demo-mode').addEventListener('click', async () => {
+      this._clearMessage();
+      try {
+        await this._onStartGame(null, this._user, true);
+      } catch (err) {
+        this._showMessage(this._friendlyStartError(err), 'error');
+      }
+    });
+
+    document.getElementById('btn-view-leaderboard').addEventListener('click', () => {
+      if (this._videoId) window.leaderboardUI.show(this._videoId, this._trackData && this._trackData.title);
+    });
+
+    ['master', 'music', 'sfx'].forEach((key) => {
+      document.getElementById(`setting-${key}`).addEventListener('input', (e) => {
+        const map = { master: 'masterVolume', music: 'musicVolume', sfx: 'sfxVolume' };
+        this._settings[map[key]] = Number(e.target.value) / 100;
+        this._saveSettings();
+      });
     });
   }
 
-  // ── User registration ──────────────────────────────────────────────────────
+  _applySettingsToUI() {
+    document.getElementById('setting-master').value = Math.round(this._settings.masterVolume * 100);
+    document.getElementById('setting-music').value = Math.round(this._settings.musicVolume * 100);
+    document.getElementById('setting-sfx').value = Math.round(this._settings.sfxVolume * 100);
+    this._saveSettings();
+  }
 
   async _setUsername() {
     const input = document.getElementById('input-username');
     const name = input.value.trim();
+    const color = document.getElementById('color-custom').value || '#ffffff';
     if (!name) return;
 
     try {
-      const user = await APIClient.registerUser(name, '#ffffff');
+      const user = await APIClient.registerUser(name, color);
       this._saveUser(user);
       this._refreshUserPanel();
+      this._showMessage(`Player ready: ${user.username}`, 'success');
     } catch (err) {
       if (err.message === 'Username already taken') {
-        // Try to recover by checking localStorage for a matching ID
         const cached = this._loadUser();
         if (cached && cached.username.toLowerCase() === name.toLowerCase()) {
-          this._saveUser(cached);
+          this._saveUser({ ...cached, color });
           this._refreshUserPanel();
           return;
         }
-        alert('Username is already taken. Please choose another.');
+        this._showMessage('Username is already taken. Please choose another.', 'error');
       } else {
-        // Offline fallback: store locally without server ID
-        const localUser = { id: null, username: name, color: '#ffffff', offline: true };
+        const localUser = { id: null, username: name, color, offline: true };
         this._saveUser(localUser);
         this._refreshUserPanel();
+        this._showMessage('Offline profile created locally.', 'info');
       }
     }
   }
 
-  // ── Color ──────────────────────────────────────────────────────────────────
-
-  async _saveColor() {
-    const color = document.getElementById('color-custom').value;
-    if (this._user) {
-      this._user.color = color;
+  _changeExistingUserColor() {
+    if (!this._user) return;
+    const picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = this._user.color || '#ffffff';
+    picker.style.position = 'fixed';
+    picker.style.left = '-999px';
+    document.body.appendChild(picker);
+    picker.addEventListener('input', async () => {
+      this._user.color = picker.value;
       this._saveUser(this._user);
+      this._refreshUserPanel();
       if (this._user.id) {
-        try { await APIClient.updateColor(this._user.id, color); } catch (_) {}
+        try { await APIClient.updateColor(this._user.id, picker.value); } catch (_) {}
       }
-    }
-    document.getElementById('color-panel').classList.add('hidden');
-    this._refreshUserPanel();
+      picker.remove();
+    }, { once: true });
+    picker.click();
   }
-
-  // ── Track loading ──────────────────────────────────────────────────────────
 
   async _loadTrack() {
     const url = document.getElementById('input-url').value.trim();
-    if (!url) return;
+    if (!url) {
+      this._showMessage('Paste a YouTube or YouTube Music link first.', 'error');
+      return;
+    }
 
     const statusEl = document.getElementById('track-status');
     const statusText = document.getElementById('track-status-text');
     const infoEl = document.getElementById('track-info');
     const fill = document.getElementById('progress-fill');
 
+    this._clearMessage();
     statusEl.classList.remove('hidden');
     infoEl.classList.add('hidden');
-    statusText.textContent = 'Analysing audio…';
+    statusText.textContent = 'Preprocessing song for sync…';
     fill.style.width = '10%';
 
-    try {
-      // Animate progress bar while waiting
-      let prog = 10;
-      const progInterval = setInterval(() => {
-        prog = Math.min(90, prog + 3);
-        fill.style.width = prog + '%';
-      }, 800);
+    let prog = 10;
+    const progInterval = setInterval(() => {
+      prog = Math.min(90, prog + 3);
+      fill.style.width = `${prog}%`;
+    }, 500);
 
+    try {
       const data = await APIClient.analyzeTrack(url);
       clearInterval(progInterval);
       fill.style.width = '100%';
-
       this._videoId = data.videoId;
-      this._trackData = data;
-
-      document.getElementById('track-title').textContent = data.title || data.videoId;
-      document.getElementById('track-bpm').textContent = `BPM: ${Math.round(data.bpm || 0)}`;
-
+      this._trackData = { ...data, sourceUrl: url };
+      this._renderTrackInfo(this._trackData);
+      this._rememberTrack(this._trackData);
       setTimeout(() => {
         statusEl.classList.add('hidden');
         infoEl.classList.remove('hidden');
-      }, 400);
-
+      }, 250);
     } catch (err) {
-      statusText.textContent = 'Analysis failed: ' + err.message;
+      clearInterval(progInterval);
       fill.style.width = '0%';
+      infoEl.classList.add('hidden');
+      statusText.textContent = this._friendlyLoadError(err.message);
+      this._showMessage(this._friendlyLoadError(err.message), 'error');
     }
+  }
+
+  _renderTrackInfo(data) {
+    document.getElementById('track-title').textContent = data.title || data.videoId;
+    document.getElementById('track-artist').textContent = data.artist || 'YouTube';
+    document.getElementById('track-bpm').textContent = `BPM: ${Math.round(data.bpm || 0)}`;
+    document.getElementById('track-duration').textContent = `Length: ${this._formatTime(data.duration || 0)}`;
+    document.getElementById('track-thumb').src = data.thumbnail || `https://i.ytimg.com/vi/${data.videoId}/hqdefault.jpg`;
+    document.getElementById('track-analysis-pill').textContent = data.analysisKey
+      ? `Seed ${data.seed} · cache ${data.analysisKey}`
+      : 'Demo track';
+  }
+
+  _rememberTrack(trackData) {
+    const compact = {
+      videoId: trackData.videoId,
+      title: trackData.title,
+      artist: trackData.artist,
+      thumbnail: trackData.thumbnail,
+      bpm: trackData.bpm,
+      duration: trackData.duration,
+      analysisKey: trackData.analysisKey,
+      seed: trackData.seed,
+      sourceUrl: trackData.sourceUrl,
+      waveform: trackData.waveform,
+    };
+    this._recentSongs = [compact, ...this._recentSongs.filter((song) => song.videoId !== compact.videoId)].slice(0, 8);
+    this._saveRecentSongs();
+    this._renderRecentSongs();
+  }
+
+  _renderRecentSongs() {
+    const root = document.getElementById('recent-songs');
+    root.innerHTML = '';
+    if (!this._recentSongs.length) {
+      root.innerHTML = '<p class="input-hint">Your last loaded songs appear here.</p>';
+      return;
+    }
+
+    this._recentSongs.forEach((song) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'recent-song-item';
+      btn.innerHTML = `
+        <img src="${song.thumbnail || `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`}" alt="${song.title || song.videoId}" />
+        <span class="recent-song-copy">
+          <strong>${song.title || song.videoId}</strong>
+          <span>${song.artist || 'YouTube'}</span>
+          <span>${this._formatTime(song.duration || 0)} · BPM ${Math.round(song.bpm || 0)}</span>
+        </span>
+        <span class="recent-song-badge">DDR</span>
+      `;
+      btn.addEventListener('click', () => {
+        this._trackData = { ...song };
+        this._videoId = song.videoId;
+        document.getElementById('input-url').value = song.sourceUrl || `https://www.youtube.com/watch?v=${song.videoId}`;
+        document.getElementById('track-status').classList.add('hidden');
+        document.getElementById('track-info').classList.remove('hidden');
+        this._renderTrackInfo(this._trackData);
+      });
+      root.appendChild(btn);
+    });
+  }
+
+  _friendlyLoadError(message) {
+    if (/Unsupported/.test(message)) return 'Unsupported link. Use a YouTube or YouTube Music track URL.';
+    if (/Analysis unavailable/.test(message)) return 'Analysis unavailable. Try again or use Demo Mode.';
+    return `Load failed: ${message}`;
+  }
+
+  _friendlyStartError(error) {
+    const code = error && error.code;
+    if (code === 'PLAYER_NOT_READY') return 'Player is still loading the song. Try START again in a moment.';
+    if (code === 'AUTOPLAY_BLOCKED') return 'Playback was blocked by the browser. Press START again.';
+    return (error && error.message) || 'Could not start the song.';
+  }
+
+  _formatTime(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const mins = Math.floor(sec / 60);
+    const secs = String(sec % 60).padStart(2, '0');
+    return `${mins}:${secs}`;
   }
 }

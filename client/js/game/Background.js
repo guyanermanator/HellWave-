@@ -1,11 +1,15 @@
-/* game/Background.js — scrolling starfield + beat-reactive nebula */
+/* game/Background.js — scrolling starfield + spectrum backdrop */
 
 class Background {
   constructor(canvas) {
     this._canvas = canvas;
     this._stars = [];
-    this._bassEnergy = 0;
     this._beatFlash = 0;
+    this._freq = {
+      sub: 0, bass: 0, lowMid: 0, mid: 0,
+      highMid: 0, presence: 0, brilliance: 0, air: 0,
+      pan: 0,
+    };
     this._init();
   }
 
@@ -19,13 +23,13 @@ class Background {
         speed: 0.3 + Math.random() * 1.5,
         size: Math.random() < 0.1 ? 2 : 1,
         brightness: 0.3 + Math.random() * 0.7,
-        twinkle: Math.random() * Math.PI * 2
+        twinkle: Math.random() * Math.PI * 2,
       });
     }
   }
 
   onFreqFrame(frame) {
-    this._bassEnergy = frame.bass;
+    this._freq = { ...this._freq, ...(frame || {}) };
   }
 
   onBeat() {
@@ -34,27 +38,28 @@ class Background {
 
   update(dt) {
     const h = this._canvas.height;
-    for (const s of this._stars) {
-      s.y += s.speed * (1 + this._bassEnergy * 2) * dt * 60;
-      s.twinkle += 0.05;
-      if (s.y > h) {
-        s.y = 0;
-        s.x = Math.random() * this._canvas.width;
+    const bassBoost = (this._freq.sub + this._freq.bass) * 0.5;
+    for (const star of this._stars) {
+      star.y += star.speed * (1 + bassBoost * 2) * dt * 60;
+      star.x += (this._freq.pan || 0) * 0.15;
+      star.twinkle += 0.05;
+      if (star.y > h) {
+        star.y = 0;
+        star.x = Math.random() * this._canvas.width;
       }
+      if (star.x < 0) star.x = this._canvas.width;
+      if (star.x > this._canvas.width) star.x = 0;
     }
     this._beatFlash = Math.max(0, this._beatFlash - dt * 8);
-    this._bassEnergy *= 0.9; // smooth decay
   }
 
   draw(ctx) {
     const w = this._canvas.width;
     const h = this._canvas.height;
 
-    // Deep background
     ctx.fillStyle = '#000008';
     ctx.fillRect(0, 0, w, h);
 
-    // Nebula glow on beat
     if (this._beatFlash > 0.01) {
       const alpha = this._beatFlash * 0.08;
       const grd = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.8);
@@ -65,22 +70,37 @@ class Background {
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Bass energy glow at bottom
-    if (this._bassEnergy > 0.1) {
-      const alpha = this._bassEnergy * 0.15;
-      const grd = ctx.createLinearGradient(0, h * 0.7, 0, h);
-      grd.addColorStop(0, 'transparent');
-      grd.addColorStop(1, `rgba(255,0,100,${alpha})`);
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, h * 0.7, w, h * 0.3);
-    }
+    this._drawSpectrum(ctx, w, h);
 
-    // Stars
-    for (const s of this._stars) {
-      const twinkle = 0.5 + 0.5 * Math.sin(s.twinkle);
-      const alpha = s.brightness * twinkle;
+    for (const star of this._stars) {
+      const twinkle = 0.5 + 0.5 * Math.sin(star.twinkle);
+      const alpha = star.brightness * twinkle;
       ctx.fillStyle = `rgba(200,200,255,${alpha})`;
-      ctx.fillRect(Math.round(s.x), Math.round(s.y), s.size, s.size);
+      ctx.fillRect(Math.round(star.x), Math.round(star.y), star.size, star.size);
     }
+  }
+
+  _drawSpectrum(ctx, w, h) {
+    const bands = [
+      ['sub', '#ff4477'],
+      ['bass', '#ff8844'],
+      ['lowMid', '#ffcc44'],
+      ['mid', '#88ff44'],
+      ['highMid', '#44ffaa'],
+      ['presence', '#44ccff'],
+      ['brilliance', '#6688ff'],
+      ['air', '#aa66ff'],
+    ];
+    const barWidth = w / bands.length;
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    for (let i = 0; i < bands.length; i++) {
+      const [key, color] = bands[i];
+      const val = this._freq[key] || 0;
+      const barH = Math.max(8, val * h * 0.16);
+      ctx.fillStyle = color;
+      ctx.fillRect(i * barWidth + 2, h - barH - 6, barWidth - 4, barH);
+    }
+    ctx.restore();
   }
 }

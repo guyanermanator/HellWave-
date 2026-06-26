@@ -1,18 +1,20 @@
 /* game/Game.js — main game loop and orchestration */
 
 class Game {
-  constructor(canvas, audioEngine, beatTracker, onGameOver) {
+  constructor(canvas, audioEngine, beatTracker, trackData, user, onGameOver) {
     this._canvas = canvas;
     this._ctx = canvas.getContext('2d');
     this._audio = audioEngine;
     this._beatTracker = beatTracker;
+    this._trackData = trackData || {};
+    this._user = user || null;
     this._onGameOver = onGameOver;
 
     this._state = new GameState();
     this._bg = new Background(canvas);
     this._grid = new Grid(canvas);
     this._particles = new ParticleSystem();
-    this._player = new Player(canvas);
+    this._player = new Player(canvas, user && user.color);
     this._bullets = new BulletManager(canvas);
     this._enemies = new EnemyManager(canvas);
     this._comboMeter = new ComboMeter();
@@ -23,46 +25,55 @@ class Game {
     this._rafId = null;
     this._lastTime = 0;
     this._paused = false;
-
-    // Score popup queue
     this._popups = [];
+    this._demoElapsed = 0;
+    this._ended = false;
+    this._currentFreq = { bass: 0, mid: 0, highMid: 0 };
+    this._duration = Number(this._trackData.duration) || 0;
 
-    // Beat listener
+    this._enemies.loadTrack(this._trackData);
+    this._hud.configureTrack(this._trackData);
+
     if (beatTracker) {
       beatTracker.onBeat = (idx) => this._onBeat(idx);
       beatTracker.onFreqFrame = (frame) => this._onFreqFrame(frame);
     }
 
-    // Keyboard: P = pause
     this._keydownHandler = (e) => {
       if (e.code === 'KeyP') this.togglePause();
     };
     window.addEventListener('keydown', this._keydownHandler);
   }
 
-  /** Setup mobile controls after construction */
   setMobileControls(mc) {
     this._mobileControls = mc;
   }
 
-  start() {
+  start(startTimeSec = 0) {
     this._state.reset();
     this._bullets.clear();
-    this._enemies.clear();
+    this._enemies.loadTrack(this._trackData);
     this._popups = [];
     this._paused = false;
     this._running = true;
+    this._ended = false;
+    this._demoElapsed = 0;
     this._lastTime = performance.now();
+    this._beatTracker.seek(startTimeSec);
     this._beatTracker.start();
-    if (this._audio) this._audio.play();
+    this._player.primePointerTarget();
     this._loop(performance.now());
   }
 
   stop() {
     this._running = false;
-    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
     this._beatTracker.stop();
     if (this._audio) this._audio.pause();
+    if (this._mobileControls) this._mobileControls.hide();
     window.removeEventListener('keydown', this._keydownHandler);
   }
 
@@ -72,9 +83,13 @@ class Game {
       this._audio && this._audio.pause();
       document.getElementById('pause-overlay').classList.remove('hidden');
     } else {
-      this._audio && this._audio.play();
+      this._audio && this._audio.play().catch(() => {});
       document.getElementById('pause-overlay').classList.add('hidden');
     }
+  }
+
+  finishTrack() {
+    if (!this._ended) this._endGame(true);
   }
 
   _loop(ts) {
@@ -88,30 +103,35 @@ class Game {
     this._draw();
   }
 
-  _update(dt) {
-    const currentTime = this._audio ? this._audio.getCurrentTime() : this._state.score / 1000;
+  _getCurrentTime(dt = 0) {
+    if (this._audio) return this._audio.getCurrentTime();
+    if (this._beatTracker && typeof this._beatTracker._getTime === 'function') {
+      return this._beatTracker._getTime();
+    }
+    this._demoElapsed += dt;
+    return this._demoElapsed;
+  }
 
-    // Update subsystems
+  _update(dt) {
+    const currentTime = this._getCurrentTime(dt);
+    if (this._duration > 0 && currentTime >= this._duration) {
+      this._endGame(true);
+      return;
+    }
+
+    this._mobileControls && this._mobileControls.update();
     this._bg.update(dt);
     this._grid.update(dt);
     this._particles.update(dt);
     this._player.update(dt, this._grid);
-    this._enemies.update(dt, this._beatTracker, this._player);
+    this._enemies.update(dt, this._beatTracker, this._player, currentTime);
 
-    // Collect enemy bullets
     const enemyBullets = this._enemies.collectBullets();
     this._bullets.addEnemyBullets(enemyBullets);
-
-    // Player new bullets
-    const playerBullets = this._player.getNewBullets();
-    this._bullets.addPlayerBullets(playerBullets);
-
+    this._bullets.addPlayerBullets(this._player.getNewBullets());
     this._bullets.update(dt);
 
-    // Player bullets vs enemies
-    const hits = this._bullets.checkPlayerVsEnemies(
-      this._enemies.enemies, this._beatTracker, currentTime);
-
+    const hits = this._bullets.checkPlayerVsEnemies(this._enemies.enemies, this._beatTracker, currentTime);
     for (const { enemy, onBeat } of hits) {
       const died = enemy.hit(1);
       this._particles.spark(enemy.x, enemy.y, enemy.color);
@@ -122,23 +142,20 @@ class Game {
       }
     }
 
-    // Enemy bullets vs player
     if (this._bullets.checkEnemyVsPlayer(this._player, this._beatTracker, currentTime)) {
       this._state.onPlayerHit();
       this._particles.burst(this._player.x, this._player.y, '#ff4488', 12, 3);
       if (this._state.gameOver) {
-        this._endGame();
+        this._endGame(false);
         return;
       }
     }
 
-    // Update score popups
-    this._popups = this._popups.filter(p => { p.life -= dt; return p.life > 0; });
-    for (const p of this._popups) { p.y -= 40 * dt; }
+    this._popups = this._popups.filter((popup) => { popup.life -= dt; return popup.life > 0; });
+    for (const popup of this._popups) popup.y -= 40 * dt;
 
-    // Update UI
     this._comboMeter.update(this._state, dt);
-    this._hud.update(this._state, this._beatTracker);
+    this._hud.update(this._state, this._beatTracker, currentTime, this._duration, this._currentFreq);
   }
 
   _draw() {
@@ -156,10 +173,10 @@ class Game {
     ctx.save();
     ctx.font = '700 11px "Share Tech Mono", monospace';
     ctx.textAlign = 'center';
-    for (const p of this._popups) {
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.fillText(p.text, p.x, p.y);
+    for (const popup of this._popups) {
+      ctx.globalAlpha = popup.life;
+      ctx.fillStyle = popup.color;
+      ctx.fillText(popup.text, popup.x, popup.y);
     }
     ctx.globalAlpha = 1;
     ctx.restore();
@@ -179,23 +196,28 @@ class Game {
   }
 
   _onFreqFrame(frame) {
+    this._currentFreq = frame;
     this._bg.onFreqFrame(frame);
     this._enemies.onFreqFrame(frame);
   }
 
-  _endGame() {
+  _endGame(completed) {
+    if (this._ended) return;
+    this._ended = true;
     this._running = false;
     this._beatTracker.stop();
     if (this._audio) this._audio.pause();
-    if (this._onGameOver) {
+    if (typeof this._onGameOver === 'function') {
       this._onGameOver({
         score: this._state.score,
         comboRank: this._state.maxComboRank.rank,
-        maxComboPoints: this._state.comboPoints
+        maxComboPoints: this._state.comboPoints,
+        completed,
+        duration: this._duration,
       });
     }
   }
 
   get player() { return this._player; }
-  get state()  { return this._state; }
+  get state() { return this._state; }
 }
