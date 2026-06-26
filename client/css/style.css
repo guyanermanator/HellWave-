@@ -1,0 +1,381 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   HellWave — Global Styles
+   Pixel / retro aesthetic, dark neon palette
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0a0010;
+  color: #e0e0ff;
+  font-family: 'Share Tech Mono', monospace;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+}
+
+/* ── Screen system ── */
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+.screen.hidden { display: none !important; }
+.screen.active { display: flex; }
+
+/* ─────────────────────────── MAIN MENU ─────────────────────────────────── */
+.menu-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(120,0,200,0.4) 0%, transparent 60%),
+    radial-gradient(ellipse at 20% 80%, rgba(0,80,200,0.3) 0%, transparent 50%),
+    #0a0010;
+  animation: menuPulse 4s ease-in-out infinite alternate;
+}
+@keyframes menuPulse {
+  from { opacity: 0.8; }
+  to   { opacity: 1; }
+}
+
+.menu-content {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
+  padding: 2rem;
+  width: min(460px, 96vw);
+  max-height: 96vh;
+  overflow-y: auto;
+}
+
+.game-title {
+  font-family: 'Press Start 2P', cursive;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  text-transform: uppercase;
+  color: #cc44ff;
+  text-shadow: 0 0 20px #cc44ff, 0 0 40px #660088, 2px 2px 0 #220033;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+.title-accent { color: #ff4488; text-shadow: 0 0 20px #ff4488, 2px 2px 0 #440011; }
+.game-subtitle {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.85rem;
+  color: #8888cc;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-top: -1rem;
+}
+
+/* ── Panel ── */
+.panel {
+  background: rgba(10,0,30,0.85);
+  border: 1px solid rgba(150,50,255,0.4);
+  border-radius: 4px;
+  padding: 1.2rem 1.4rem;
+  width: 100%;
+  box-shadow: 0 0 24px rgba(150,50,255,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.panel h3 {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.65rem;
+  color: #bb88ff;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+
+/* ── Inputs ── */
+input[type="text"], input[type="color"] {
+  width: 100%;
+  background: rgba(0,0,20,0.8);
+  border: 1px solid rgba(150,50,255,0.5);
+  border-radius: 2px;
+  color: #e0e0ff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.7rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input[type="text"]:focus { border-color: #cc44ff; box-shadow: 0 0 8px rgba(200,68,255,0.3); }
+.input-hint { font-size: 0.65rem; color: #6666aa; margin-top: 0.4rem; }
+
+.url-row { display: flex; gap: 0.5rem; }
+.url-row input { flex: 1; }
+
+/* ── Buttons ── */
+.btn-primary, .btn-secondary, .btn-small, .btn-link {
+  font-family: 'Press Start 2P', cursive;
+  cursor: pointer;
+  border: none;
+  border-radius: 2px;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #8800ff, #cc44ff);
+  color: #fff;
+  font-size: 0.6rem;
+  padding: 0.6rem 1.2rem;
+  box-shadow: 0 4px 0 #440088, 0 0 12px rgba(200,68,255,0.3);
+}
+.btn-primary:hover  { transform: translateY(-1px); box-shadow: 0 5px 0 #440088, 0 0 20px rgba(200,68,255,0.5); }
+.btn-primary:active { transform: translateY(2px);  box-shadow: 0 2px 0 #440088; }
+.btn-large { font-size: 0.75rem; padding: 0.8rem 2rem; margin-top: 0.5rem; }
+.btn-secondary {
+  background: rgba(0,0,0,0);
+  border: 1px solid rgba(150,50,255,0.5);
+  color: #aa88ff;
+  font-size: 0.55rem;
+  padding: 0.5rem 1rem;
+}
+.btn-secondary:hover { border-color: #cc44ff; color: #cc44ff; }
+.btn-small {
+  background: rgba(0,0,0,0);
+  border: 1px solid rgba(100,100,200,0.4);
+  color: #8888cc;
+  font-size: 0.5rem;
+  padding: 0.3rem 0.6rem;
+}
+.btn-link {
+  background: none; border: none;
+  color: #aa66ff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: inherit;
+  text-decoration: underline;
+  padding: 0;
+}
+.button-row { display: flex; gap: 0.8rem; margin-top: 0.8rem; }
+
+/* ── Color presets ── */
+.color-presets { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+.color-swatch {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.color-swatch:hover, .color-swatch.selected { transform: scale(1.2); border-color: #fff; }
+
+/* ── User display ── */
+#user-display { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; }
+.username-text { font-family: 'Press Start 2P', cursive; font-size: 0.7rem; }
+
+/* ── Progress bar ── */
+.progress-bar {
+  width: 100%; height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+#progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8800ff, #ff44aa);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s;
+  animation: progressPulse 1s ease-in-out infinite alternate;
+}
+@keyframes progressPulse { from { opacity: 0.7; } to { opacity: 1; } }
+
+/* ── Track info ── */
+#track-title { font-size: 0.75rem; color: #ddaaff; margin-bottom: 0.3rem; }
+#track-bpm   { font-size: 0.65rem; color: #8888cc; margin-bottom: 0.8rem; }
+
+/* ─────────────────────────── GAME SCREEN ─────────────────────────────────── */
+#screen-game { background: #000; }
+
+#game-canvas {
+  display: block;
+  touch-action: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* YouTube hidden player */
+#yt-player-wrap {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  left: -999px;
+}
+
+/* ── HUD ── */
+#hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+  padding: 8px 12px;
+  font-family: 'Press Start 2P', cursive;
+}
+#hud-left, #hud-right { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
+#hud-right { align-items: flex-end; }
+#hud-center { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.hud-label { font-size: 0.4rem; color: #8888cc; display: block; }
+#score-value { font-size: 0.75rem; color: #ffffc0; text-shadow: 0 0 8px #ffff44; }
+#bpm-value { font-size: 0.65rem; color: #80ffdd; }
+
+/* ── Lives ── */
+#hud-lives { display: flex; gap: 4px; }
+.life-icon {
+  width: 12px; height: 12px;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  background: #ff4488;
+  box-shadow: 0 0 6px #ff4488;
+}
+.life-icon.lost { opacity: 0.2; }
+
+/* ── Combo meter ── */
+#combo-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 80px;
+}
+#combo-rank-text {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 1.4rem;
+  line-height: 1;
+  text-shadow: 0 0 12px currentColor;
+  transition: color 0.3s, font-size 0.15s;
+}
+#combo-bar-bg {
+  width: 80px; height: 6px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+#combo-bar-fill {
+  height: 100%;
+  background: currentColor;
+  border-radius: 2px;
+  transition: width 0.15s;
+}
+#combo-points-text { font-size: 0.45rem; color: #8888cc; }
+#combo-excited-text {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.5rem;
+  animation: excitedBounce 0.4s ease-in-out infinite alternate;
+  text-shadow: 0 0 8px currentColor;
+}
+@keyframes excitedBounce {
+  from { transform: scale(1) rotate(-2deg); }
+  to   { transform: scale(1.1) rotate(2deg); }
+}
+
+/* ── Beat indicator ── */
+#beat-indicator {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.3);
+  transition: all 0.05s;
+}
+#beat-indicator.pulse {
+  background: rgba(255,255,200,0.9);
+  box-shadow: 0 0 12px #ffffaa, 0 0 24px #ffaa44;
+  transform: scale(1.3);
+}
+
+#hud-track-name {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  color: #6666aa;
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ── Overlays (pause / game-over) ── */
+#pause-overlay, #gameover-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1rem;
+  background: rgba(0,0,10,0.8);
+  backdrop-filter: blur(4px);
+}
+#pause-overlay h2, #gameover-overlay h2 {
+  font-family: 'Press Start 2P', cursive;
+  font-size: clamp(1.2rem, 5vw, 2rem);
+  color: #cc44ff;
+  text-shadow: 0 0 20px #cc44ff;
+}
+#go-stats { font-size: 0.75rem; text-align: center; line-height: 2; color: #ccaaff; }
+#go-score, #go-rank { color: #ffffc0; }
+
+/* ── Mobile controls ── */
+#mobile-controls {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px 20px;
+  pointer-events: none;
+}
+#joystick-zone {
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgba(150,50,255,0.4);
+  background: rgba(0,0,20,0.4);
+  pointer-events: all;
+  position: relative;
+}
+#shoot-btn {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #ff4488, #aa0044);
+  border: 3px solid #ff88aa;
+  box-shadow: 0 0 20px #ff4488;
+  color: #fff;
+  font-size: 1.4rem;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+/* ─────────────────────────── LEADERBOARD ─────────────────────────────────── */
+.leaderboard-panel { width: min(520px, 96vw); max-height: 90vh; overflow-y: auto; }
+.leaderboard-panel h2 {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.9rem;
+  color: #cc44ff;
+  margin-bottom: 0.4rem;
+  text-align: center;
+}
+.lb-subtitle { font-size: 0.65rem; color: #8888cc; text-align: center; margin-bottom: 1rem; }
+
+#lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.65rem;
+}
+#lb-table th {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.45rem;
+  color: #8888cc;
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid rgba(150,50,255,0.3);
+}
+#lb-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+#lb-table tr:first-child td { color: #ffdd44; }
+#lb-table tr:nth-child(2) td { color: #cccccc; }
+#lb-table tr:nth-child(3) td { color: #cc8844; }
+#lb-table tr:hover td { background: rgba(150,50,255,0.1); }
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+.scroll-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ── Responsive canvas centering ── */
+@media (max-width: 640px) {
+  .game-title { font-size: 2rem; }
+}
