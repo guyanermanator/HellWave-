@@ -21,7 +21,12 @@ class BasicEnemy extends BaseEnemy {
     if (this._shootTimer <= 0) {
       this._shootTimer = 2.1;
       const ang = Math.atan2(playerY - this.y, playerX - this.x);
-      this._fireBullet(Math.cos(ang) * 2.4, Math.sin(ang) * 2.4);
+      this._fireBullet(Math.cos(ang) * 2.4, Math.sin(ang) * 2.4, '#ffcf8a', {
+        kind: 'wave',
+        radius: 3,
+        swayAmp: 1.2,
+        swayFreq: 0.45,
+      });
     }
   }
 

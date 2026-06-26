@@ -79,11 +79,17 @@ function buildDemoAnalysis() {
       beatConfidence: 1,
       pan: parseFloat((Math.sin(t * 0.8) * 0.8).toFixed(3)),
       centroid: parseFloat((0.25 + high * 0.5).toFixed(3)),
+      pitch: parseFloat((0.38 + Math.sin(t * 1.2) * 0.26).toFixed(3)),
+      pitchDelta: parseFloat((Math.sin(t * 2.6) * 0.18).toFixed(3)),
+      chord: parseFloat((Math.max(0, Math.sin(t * 0.65)) * 0.9).toFixed(3)),
       events: [],
     };
     if (frame.bass > 0.75) frame.events.push('kick');
     if (frame.mid > 0.68) frame.events.push('snare');
     if (frame.presence > 0.7) frame.events.push('hat');
+    if (frame.chord > 0.58) frame.events.push('chord');
+    if (Math.abs(frame.pitchDelta) > 0.15 && frame.onset > 0.2) frame.events.push('slide');
+    if (frame.highMid > 0.52) frame.events.push('instrument');
     frequencyFrames.push(frame);
   }
 
@@ -114,6 +120,7 @@ async function startGame(trackData, user, isDemo) {
     currentGame.stop();
     currentGame = null;
   }
+  if (!isDemo) audioEngine.stop();
 
   const analysis = isDemo ? buildDemoAnalysis() : trackData;
   let demoStartMs = performance.now();

@@ -2,7 +2,7 @@
 
 const HW = {
   /* ── Canvas / viewport ── */
-  CANVAS_W: 480,
+  CANVAS_W: 640,
   CANVAS_H: 800,
 
   /* ── Gameplay ── */
@@ -34,25 +34,27 @@ const HW = {
   COMBO_ON_BEAT_KILL: 25,
   COMBO_ON_BEAT_SHOT: 10,
   COMBO_DAMAGE: -100,
-  COMBO_OFF_BEAT: -20,
+  COMBO_OFF_BEAT: 0,
   COMBO_DECAY_RATE: 0,
 
   /* ── Grid ── */
-  GRID_COLS: 6,
+  GRID_COLS: 8,
   GRID_ROWS: 10,
 
   /* ── Enemy types (base stats) ── */
   ENEMY_DEFS: {
     basic:     { hp: 1, score: 100, speed: 1.45, color: '#ff4444', size: 14 },
-    beat:      { hp: 2, score: 250, speed: 1.1, color: '#4444ff', size: 16 },
-    frequency: { hp: 3, score: 350, speed: 1.75, color: '#44ff44', size: 14 },
+    beat:      { hp: 2, score: 260, speed: 1.05, color: '#44c4ff', size: 16 },
+    frequency: { hp: 3, score: 360, speed: 1.6, color: '#b77dff', size: 14 },
+    rhythm:    { hp: 2, score: 280, speed: 1.0, color: '#ffe066', size: 15 },
+    glide:     { hp: 2, score: 320, speed: 1.2, color: '#6dffcf', size: 13 },
     boss:      { hp: 20, score: 5000, speed: 0.8, color: '#ff88ff', size: 32 }
   },
 
   /* ── Spawn fairness ── */
   SPAWN_MIN_GAP_SEC: 0.55,
-  SPAWN_MAX_ACTIVE: 14,
-  SPAWN_MAX_BULLETS: 36,
+  SPAWN_MAX_ACTIVE: 13,
+  SPAWN_MAX_BULLETS: 28,
   SPAWN_COOLDOWN_SEC: 1.3,
 
   /* ── Background ── */
@@ -62,7 +64,8 @@ const HW = {
   DEFAULT_SETTINGS: {
     masterVolume: 0.9,
     musicVolume: 0.85,
-    sfxVolume: 0.75
+    sfxVolume: 0.75,
+    fullscreen: false,
   },
 
   /* ── API ── */

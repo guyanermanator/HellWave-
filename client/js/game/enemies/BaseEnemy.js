@@ -38,8 +38,23 @@ class BaseEnemy {
     return b;
   }
 
-  _fireBullet(vx, vy, color = '#ffff88') {
-    this._bullets.push({ x: this.x, y: this.y + this.size, vx, vy, color, fromEnemy: true });
+  _fireBullet(vx, vy, color = '#ffff88', opts = {}) {
+    this._bullets.push({
+      x: this.x,
+      y: this.y + this.size,
+      vx,
+      vy,
+      color,
+      fromEnemy: true,
+      radius: opts.radius || 4,
+      kind: opts.kind || 'orb',
+      width: opts.width || 5,
+      length: opts.length || 22,
+      trail: !!opts.trail,
+      swayAmp: opts.swayAmp || 0,
+      swayFreq: opts.swayFreq || 0,
+      age: 0,
+    });
   }
 
   draw(ctx) {

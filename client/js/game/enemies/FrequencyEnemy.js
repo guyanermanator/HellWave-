@@ -11,6 +11,7 @@ class FrequencyEnemy extends BaseEnemy {
     this._centerX = x;
     this._centerY = y + 40;
     this._shootCooldown = 0.3 + (event.roll2 || 0.5) * 0.4;
+    this._axisMode = ((event.roll || 0.5) > 0.5) ? 'horizontal' : 'vertical';
   }
 
   update(dt, beatTracker, freqFrame, playerX, playerY) {
@@ -26,12 +27,19 @@ class FrequencyEnemy extends BaseEnemy {
 
     this.x = this._centerX + Math.cos(this._angle) * this._radius;
     this.y = this._centerY + Math.sin(this._angle) * this._radius * (0.3 + high * 0.5);
+    if (this._axisMode === 'horizontal') this.y += Math.sin(this.age * 4) * 8;
+    else this.x += Math.cos(this.age * 4) * 8;
 
     this._shootCooldown -= dt;
     if ((high > 0.7 || (freqFrame && (freqFrame.events || []).includes('hat'))) && this._shootCooldown <= 0) {
       this._shootCooldown = 0.55;
       const ang = Math.atan2(playerY - this.y, playerX - this.x);
-      this._fireBullet(Math.cos(ang) * 3.4, Math.sin(ang) * 3.4, '#44ff88');
+      this._fireBullet(Math.cos(ang) * 3.4, Math.sin(ang) * 3.4, '#44ff88', {
+        kind: 'wave',
+        radius: 3,
+        swayAmp: 1.4,
+        swayFreq: 0.5,
+      });
     }
   }
 
@@ -47,5 +55,9 @@ class FrequencyEnemy extends BaseEnemy {
     ctx.strokeStyle = '#88ff88';
     ctx.lineWidth = 1;
     ctx.stroke();
+
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(this.x - 1, this.y + s, 2, 14);
+    ctx.globalAlpha = 1;
   }
 }

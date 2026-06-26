@@ -43,6 +43,9 @@ def synthetic_analysis(video_id, duration=210):
         bass = 0.5 + 0.4 * math.sin(t * 1.4 + (seed % 5))
         mid = 0.5 + 0.35 * math.sin(t * 2.2 + (seed % 7))
         high = 0.5 + 0.3 * math.sin(t * 3.8 + (seed % 13))
+        pitch = max(0.0, min(1.0, 0.42 + 0.28 * math.sin(t * 1.1 + (seed % 3))))
+        pitch_delta = 0.2 * math.sin(t * 2.4 + (seed % 6))
+        chord = max(0.0, min(1.0, 0.2 + 0.8 * max(0, math.sin(t * 0.7 + (seed % 4)))))
         frame = {
             't': round(t, 3),
             'sub': round(max(0.0, min(1.0, bass * 0.9)), 3),
@@ -57,6 +60,9 @@ def synthetic_analysis(video_id, duration=210):
             'beatConfidence': round(max(0.0, min(1.0, 1 - abs((t % beat_interval) - beat_interval * 0.5) / (beat_interval * 0.5))), 3),
             'pan': round(math.sin(t * 0.9 + (seed % 9)) * 0.7, 3),
             'centroid': round(max(0.0, min(1.0, 0.35 + high * 0.45)), 3),
+            'pitch': round(pitch, 3),
+            'pitchDelta': round(max(-1.0, min(1.0, pitch_delta)), 3),
+            'chord': round(chord, 3),
             'events': [],
         }
         if frame['bass'] > 0.72 and frame['onset'] > 0.42:
@@ -67,6 +73,12 @@ def synthetic_analysis(video_id, duration=210):
             frame['events'].append('hat')
         if frame['highMid'] > 0.58:
             frame['events'].append('vocal')
+        if frame['chord'] > 0.58:
+            frame['events'].append('chord')
+        if abs(frame['pitchDelta']) > 0.15 and frame['onset'] > 0.2:
+            frame['events'].append('slide')
+        if frame['mid'] > 0.52:
+            frame['events'].append('instrument')
         frequency_frames.append(frame)
         t += 0.1
 
