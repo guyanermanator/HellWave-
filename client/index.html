@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0010" />
+  <title>HellWave</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════ MAIN MENU ═══════════════════════════════ -->
+<div id="screen-menu" class="screen active">
+  <div class="menu-bg"></div>
+  <div class="menu-content">
+    <h1 class="game-title">HELL<span class="title-accent">WAVE</span></h1>
+    <p class="game-subtitle">Bullet Hell × Music</p>
+
+    <!-- Username panel -->
+    <div id="user-panel" class="panel">
+      <div id="user-display" class="hidden">
+        <span>Playing as: </span>
+        <span id="user-name-display" class="username-text"></span>
+        <button id="btn-change-user" class="btn-small">Change</button>
+        <button id="btn-color-user" class="btn-small">Color</button>
+      </div>
+      <div id="user-create">
+        <h3>Enter Your Name</h3>
+        <input id="input-username" type="text" maxlength="24" placeholder="YourName" autocomplete="off" spellcheck="false" />
+        <button id="btn-set-user" class="btn-primary">Set Name</button>
+        <p class="input-hint">2–24 chars · Letters, numbers, spaces, _ -</p>
+      </div>
+    </div>
+
+    <!-- Track URL panel -->
+    <div id="track-panel" class="panel hidden">
+      <h3>Paste a YouTube Link</h3>
+      <div class="url-row">
+        <input id="input-url" type="text" placeholder="https://youtube.com/watch?v=..." autocomplete="off" spellcheck="false" />
+        <button id="btn-load-track" class="btn-primary">Load</button>
+      </div>
+      <div id="track-status" class="hidden">
+        <div id="track-status-text">Analysing audio…</div>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+      </div>
+      <div id="track-info" class="hidden">
+        <p id="track-title"></p>
+        <p id="track-bpm"></p>
+        <button id="btn-start-game" class="btn-primary btn-large">START</button>
+        <button id="btn-view-leaderboard" class="btn-secondary">Leaderboard</button>
+      </div>
+      <p class="input-hint">Or <button id="btn-demo-mode" class="btn-link">play in Demo Mode</button> without a track</p>
+    </div>
+
+    <!-- Color picker (hidden by default) -->
+    <div id="color-panel" class="panel hidden">
+      <h3>Pick Your Name Color</h3>
+      <div class="color-presets">
+        <button class="color-swatch" data-color="#ffffff" style="background:#ffffff"></button>
+        <button class="color-swatch" data-color="#ff4444" style="background:#ff4444"></button>
+        <button class="color-swatch" data-color="#44ff88" style="background:#44ff88"></button>
+        <button class="color-swatch" data-color="#44aaff" style="background:#44aaff"></button>
+        <button class="color-swatch" data-color="#ffaa44" style="background:#ffaa44"></button>
+        <button class="color-swatch" data-color="#ff44ff" style="background:#ff44ff"></button>
+        <button class="color-swatch" data-color="#ffff44" style="background:#ffff44"></button>
+        <button class="color-swatch" data-color="#00ffff" style="background:#00ffff"></button>
+      </div>
+      <input id="color-custom" type="color" value="#ffffff" />
+      <div class="button-row">
+        <button id="btn-save-color" class="btn-primary">Save</button>
+        <button id="btn-cancel-color" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ GAME SCREEN ══════════════════════════════ -->
+<div id="screen-game" class="screen hidden">
+  <!-- YouTube hidden player container -->
+  <div id="yt-player-wrap" aria-hidden="true"></div>
+
+  <!-- Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD Overlay -->
+  <div id="hud">
+    <div id="hud-left">
+      <div id="hud-score"><span class="hud-label">SCORE</span><span id="score-value">0</span></div>
+      <div id="hud-lives"></div>
+    </div>
+    <div id="hud-center">
+      <div id="combo-meter">
+        <div id="combo-rank-text">E</div>
+        <div id="combo-bar-bg"><div id="combo-bar-fill"></div></div>
+        <div id="combo-points-text">0</div>
+        <div id="combo-excited-text" class="hidden"></div>
+      </div>
+      <div id="beat-indicator"></div>
+    </div>
+    <div id="hud-right">
+      <div id="hud-bpm"><span class="hud-label">BPM</span><span id="bpm-value">--</span></div>
+      <div id="hud-track-name" class="scroll-text"></div>
+    </div>
+  </div>
+
+  <!-- Pause overlay -->
+  <div id="pause-overlay" class="hidden">
+    <h2>PAUSED</h2>
+    <button id="btn-resume" class="btn-primary">Resume (P)</button>
+    <button id="btn-quit-game" class="btn-secondary">Quit to Menu</button>
+  </div>
+
+  <!-- Game over overlay -->
+  <div id="gameover-overlay" class="hidden">
+    <h2 id="go-title">GAME OVER</h2>
+    <div id="go-stats">
+      <p>Score: <span id="go-score"></span></p>
+      <p>Best Combo Rank: <span id="go-rank"></span></p>
+    </div>
+    <button id="btn-retry" class="btn-primary">Retry</button>
+    <button id="btn-go-menu" class="btn-secondary">Menu</button>
+  </div>
+
+  <!-- Mobile controls -->
+  <div id="mobile-controls" class="hidden">
+    <div id="joystick-zone"></div>
+    <button id="shoot-btn" aria-label="Shoot">●</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ LEADERBOARD ══════════════════════════════ -->
+<div id="screen-leaderboard" class="screen hidden">
+  <div class="panel leaderboard-panel">
+    <h2>LEADERBOARD</h2>
+    <p id="lb-track-name" class="lb-subtitle"></p>
+    <table id="lb-table">
+      <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Rank</th></tr></thead>
+      <tbody id="lb-body"></tbody>
+    </table>
+    <button id="btn-lb-back" class="btn-secondary">Back</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SCRIPTS (module order matters) ════════════════════ -->
+<script src="js/config.js"></script>
+<script src="js/network/APIClient.js"></script>
+<script src="js/audio/BeatTracker.js"></script>
+<script src="js/audio/AudioEngine.js"></script>
+<script src="js/game/Background.js"></script>
+<script src="js/game/Grid.js"></script>
+<script src="js/game/ParticleSystem.js"></script>
+<script src="js/game/enemies/BaseEnemy.js"></script>
+<script src="js/game/enemies/BasicEnemy.js"></script>
+<script src="js/game/enemies/BeatEnemy.js"></script>
+<script src="js/game/enemies/FrequencyEnemy.js"></script>
+<script src="js/game/enemies/BossEnemy.js"></script>
+<script src="js/game/Player.js"></script>
+<script src="js/game/BulletManager.js"></script>
+<script src="js/game/EnemyManager.js"></script>
+<script src="js/game/GameState.js"></script>
+<script src="js/game/Game.js"></script>
+<script src="js/ui/ComboMeter.js"></script>
+<script src="js/ui/HUD.js"></script>
+<script src="js/ui/MobileControls.js"></script>
+<script src="js/ui/Leaderboard.js"></script>
+<script src="js/ui/MainMenu.js"></script>
+<script src="js/main.js"></script>
+
+<!-- YouTube IFrame API — loaded async -->
+<script src="https://www.youtube.com/iframe_api" async></script>
+</body>
+</html>
