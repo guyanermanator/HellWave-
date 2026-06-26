@@ -13,6 +13,7 @@ class MobileControls {
     this._joystickDy = 0;
 
     this._visible = false;
+    this._bound = false;
   }
 
   show() {
@@ -24,10 +25,16 @@ class MobileControls {
 
   hide() {
     this._visible = false;
+    this._joystickActive = false;
+    this._joystickDx = 0;
+    this._joystickDy = 0;
+    if (this._player) this._player.shooting = false;
     this._controlsEl.classList.add('hidden');
   }
 
   _bindEvents() {
+    if (this._bound) return;
+    this._bound = true;
     // Joystick touch
     this._joystickEl.addEventListener('touchstart', (e) => {
       e.preventDefault();
